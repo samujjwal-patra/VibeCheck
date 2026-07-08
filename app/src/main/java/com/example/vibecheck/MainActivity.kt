@@ -466,7 +466,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
         gesturesEnabled = !isScanning && !showResult,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = Color.White.copy(alpha = 0.05f),
+                drawerContainerColor = Color.Black.copy(alpha = 0.4f),
                 drawerContentColor = Color.White,
                 modifier = Modifier
                     .width(300.dp)
@@ -478,7 +478,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.1f),
+                                Color.Black.copy(alpha = 0.2f),
                                 Color.Transparent
                             )
                         )
@@ -530,17 +530,17 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
             }
         }
     ) {
-        val drawerBlur by animateDpAsState(
-            targetValue = if (drawerState.targetValue == DrawerValue.Open) 16.dp else 0.dp,
+        val systemBlur by animateDpAsState(
+            targetValue = if (drawerState.targetValue == DrawerValue.Open || showAdminPasswordDialog || showThemeDialog || showExitDialog || showGenderAlert) 16.dp else 0.dp,
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioNoBouncy,
                 stiffness = Spring.StiffnessMediumLow
             ),
-            label = "drawer_blur"
+            label = "system_blur"
         )
         
         Scaffold(
-            modifier = Modifier.blur(drawerBlur),
+            modifier = Modifier.blur(systemBlur),
             topBar = {
                 if (!isScanning && !showResult && !showAdminScreen && !showAdminWelcome) {
                     CenterAlignedTopAppBar(
