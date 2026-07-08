@@ -16,13 +16,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -70,16 +68,16 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         initialValue = 1f,
         targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "scale"
     )
     val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
+        initialValue = 0.3f,
+        targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
@@ -89,148 +87,198 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
+            animation = tween(3000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "radarRotation"
     )
 
+    // Glitch Effect States
+    var glitchOffset by remember { mutableStateOf(0.dp) }
+    var glitchAlpha by remember { mutableFloatStateOf(0f) }
+
     // Phase 2: Branding Reveal
     val brandingAlpha by animateFloatAsState(
         targetValue = if (phase >= 2) 1f else 0f,
-        animationSpec = tween(1000),
+        animationSpec = tween(800),
         label = "brandingAlpha"
     )
-    val brandingOffset by animateDpAsState(
-        targetValue = if (phase >= 2) 0.dp else 20.dp,
+    val brandingScale by animateFloatAsState(
+        targetValue = if (phase >= 2) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "brandingScale"
+    )
+
+    // Scanning Beam
+    val beamPosition by animateFloatAsState(
+        targetValue = if (phase >= 2) 1.2f else -0.2f,
+        animationSpec = tween(2000, easing = LinearOutSlowInEasing),
+        label = "beamPosition"
+    )
+
+    // Background Particle States (Simulated)
+    val particleAlpha by animateFloatAsState(
+        targetValue = if (phase < 3) 0.4f else 0f,
         animationSpec = tween(1000),
-        label = "brandingOffset"
-    )
-
-    // Laser Sweep Animation
-    val laserPosition by animateFloatAsState(
-        targetValue = if (phase >= 2) 1.5f else -0.5f,
-        animationSpec = tween(1500, easing = LinearEasing),
-        label = "laserPosition"
-    )
-
-    // Phase 3 Transition
-    val splashScale by animateFloatAsState(
-        targetValue = if (phase >= 3) 0.8f else 1f,
-        animationSpec = tween(500),
-        label = "splashScale"
-    )
-    val splashAlpha by animateFloatAsState(
-        targetValue = if (phase >= 3) 0f else 1f,
-        animationSpec = tween(500),
-        label = "splashAlpha"
+        label = "particleAlpha"
     )
 
     LaunchedEffect(Unit) {
-        delay(1000) // Phase 1 duration
+        // Phase 1: Ambient
+        delay(1200)
         phase = 2
-        delay(1000) // Phase 2 reveal duration
+        
+        // Random Glitch Effects during reveal
+        repeat(5) {
+            delay((100..300).random().toLong())
+            glitchOffset = ((-5)..5).random().dp
+            glitchAlpha = 0.5f
+            delay(50)
+            glitchOffset = 0.dp
+            glitchAlpha = 0f
+        }
+        
+        delay(800)
         phase = 3
-        delay(500) // Phase 3 transition duration
+        delay(600)
         onAnimationFinished()
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .alpha(splashAlpha)
-            .scale(splashScale),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Phase 1: Pulsing Radar Graphic
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(120.dp)) {
-                // Glow effect
+        // Background Grid/Data Pattern
+        Canvas(modifier = Modifier.fillMaxSize().alpha(0.1f * particleAlpha)) {
+            val step = 40.dp.toPx()
+            for (i in 0..size.width.toInt() step step.toInt()) {
+                drawLine(NeonCyan, androidx.compose.ui.geometry.Offset(i.toFloat(), 0f), androidx.compose.ui.geometry.Offset(i.toFloat(), size.height), strokeWidth = 1f)
+            }
+            for (i in 0..size.height.toInt() step step.toInt()) {
+                drawLine(NeonCyan, androidx.compose.ui.geometry.Offset(0f, i.toFloat()), androidx.compose.ui.geometry.Offset(size.width, i.toFloat()), strokeWidth = 1f)
+            }
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.scale(if(phase >= 3) 0.9f else 1f).alpha(if(phase >= 3) 0f else 1f)
+        ) {
+            // THE CORE: Multi-layered Radar
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(200.dp)) {
+                // Outer Glow Ring
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
-                        .scale(pulseScale)
-                        .alpha(pulseAlpha * 0.3f)
-                        .background(NeonCyan, RoundedCornerShape(50.dp))
-                        .blur(30.dp)
+                        .size(140.dp)
+                        .scale(pulseScale * 1.1f)
+                        .alpha(pulseAlpha * 0.2f)
+                        .background(NeonCyan, RoundedCornerShape(100.dp))
+                        .blur(40.dp)
                 )
-                
-                Canvas(modifier = Modifier.size(80.dp).scale(pulseScale).alpha(pulseAlpha)) {
-                    // Draw Radar Circles
-                    drawCircle(
-                        color = NeonCyan,
-                        radius = size.minDimension / 2,
-                        style = Stroke(width = 2.dp.toPx())
-                    )
-                    drawCircle(
-                        color = NeonCyan,
-                        radius = size.minDimension / 4,
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-                    
-                    // Draw scanning line
-                    val sweepAngle = 60f
-                    drawArc(
-                        brush = Brush.sweepGradient(
-                            0f to Color.Transparent,
-                            0.5f to NeonCyan.copy(alpha = 0.5f),
-                            1f to NeonCyan
-                        ),
-                        startAngle = radarRotation,
-                        sweepAngle = sweepAngle,
-                        useCenter = true,
-                        alpha = 0.6f
-                    )
+
+                // Rotating Scanning Interface
+                Canvas(modifier = Modifier.size(120.dp)) {
+                    rotate(radarRotation) {
+                        drawCircle(
+                            color = NeonCyan,
+                            radius = size.minDimension / 2,
+                            style = Stroke(width = 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
+                        )
+                        
+                        // Scanning Sweep
+                        drawArc(
+                            brush = Brush.sweepGradient(
+                                0f to Color.Transparent,
+                                0.8f to NeonCyan.copy(alpha = 0.1f),
+                                1f to NeonCyan
+                            ),
+                            startAngle = 0f,
+                            sweepAngle = 90f,
+                            useCenter = true
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Phase 2: Branding
-            Box(
-                modifier = Modifier
-                    .offset(y = brandingOffset)
-                    .alpha(brandingAlpha),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "VibeCheck",
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    letterSpacing = 4.sp
-                )
-                
-                // Laser line sweep
-                if (phase >= 2) {
-                    BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                        val width = maxWidth
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(width)
-                                .clip(RoundedCornerShape(4.dp))
-                        ) {
-                           Box(
-                               modifier = Modifier
-                                   .offset(x = width * (laserPosition - 0.5f))
-                                   .width(2.dp)
-                                   .fillMaxHeight()
-                                   .background(
-                                       brush = Brush.verticalGradient(
-                                           colors = listOf(
-                                               Color.Transparent,
-                                               NeonCyan,
-                                               Color.Transparent
-                                           )
-                                       )
-                                   )
-                                   .blur(2.dp)
-                           )
-                        }
+                // Inner Core
+                Surface(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .scale(pulseScale),
+                    shape = RoundedCornerShape(30.dp),
+                    color = NeonCyan.copy(alpha = 0.1f),
+                    border = androidx.compose.foundation.BorderStroke(2.dp, NeonCyan)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if(phase == 1) "SCAN" else "READY",
+                            color = NeonCyan,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(60.dp))
+
+            // BRANDING with Glitch & Scan
+            Box(
+                modifier = Modifier
+                    .offset(x = glitchOffset)
+                    .scale(brandingScale)
+                    .alpha(brandingAlpha),
+                contentAlignment = Alignment.Center
+            ) {
+                // Main Text
+                Text(
+                    text = "VIBECHECK",
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = 8.sp
+                )
+
+                // Cyan Ghosting (Glitch)
+                if (glitchAlpha > 0f) {
+                    Text(
+                        text = "VIBECHECK",
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Black,
+                        color = NeonCyan.copy(alpha = glitchAlpha),
+                        letterSpacing = 8.sp,
+                        modifier = Modifier.offset(x = glitchOffset * 2)
+                    )
+                }
+
+                // Scanning Beam overlay
+                BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                    val width = maxWidth
+                    
+                    // Vertical Laser
+                    Box(
+                        modifier = Modifier
+                            .offset(x = width * beamPosition - (width/2))
+                            .width(4.dp)
+                            .fillMaxHeight()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color.Transparent, NeonCyan, Color.Transparent)
+                                )
+                            )
+                            .blur(4.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Subtitle
+            Text(
+                text = "NEURAL AURA INTERFACE v1.0",
+                color = NeonCyan.copy(alpha = brandingAlpha * 0.6f),
+                fontSize = 10.sp,
+                letterSpacing = 4.sp,
+                fontWeight = FontWeight.Light
+            )
         }
     }
 }
