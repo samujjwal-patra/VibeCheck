@@ -380,9 +380,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
 
     LaunchedEffect(Unit) { visible = true }
 
-    if (showAdminScreen) {
-        AdminScreen(onDismiss = { showAdminScreen = false })
-    }
+
 
 
 
@@ -517,7 +515,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
     ) {
         Scaffold(
             topBar = {
-                if (!isScanning && !showResult) {
+                if (!isScanning && !showResult && !showAdminScreen && !showAdminWelcome) {
                     CenterAlignedTopAppBar(
                         title = { },
                         navigationIcon = {
@@ -585,7 +583,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
                 }
 
                 AnimatedVisibility(
-                    visible = visible && !isScanning && !showResult,
+                    visible = visible && !isScanning && !showResult && !showAdminScreen && !showAdminWelcome,
                     enter = fadeIn(animationSpec = tween(1000)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
                 ) {
                     Column(
@@ -793,6 +791,10 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
             showAdminWelcome = false
             showAdminScreen = true
         })
+    }
+
+    if (showAdminScreen) {
+        AdminScreen(onDismiss = { showAdminScreen = false })
     }
 }
 
