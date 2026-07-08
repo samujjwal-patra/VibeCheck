@@ -12,6 +12,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +33,7 @@ import com.example.vibecheck.ui.theme.DarkCharcoal
 import com.example.vibecheck.ui.theme.NeonCyan
 import com.example.vibecheck.ui.theme.VibeCheckTheme
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -290,70 +295,150 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen() {
     var visible by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
     
     LaunchedEffect(Unit) {
         visible = true
     }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(1000)) + 
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = DarkCharcoal,
+                drawerContentColor = Color.White,
+                modifier = Modifier.width(300.dp)
+            ) {
+                Spacer(modifier = Modifier.height(48.dp))
+                Text(
+                    "SYSTEM SETTINGS",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NeonCyan,
+                    letterSpacing = 2.sp
+                )
+                NavigationDrawerItem(
+                    label = { Text("THEME SELECTION", letterSpacing = 1.sp) },
+                    selected = false,
+                    onClick = { /* TODO */ },
+                    icon = { Icon(Icons.Default.Palette, contentDescription = null) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = NeonCyan,
+                        unselectedTextColor = Color.White
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                NavigationDrawerItem(
+                    label = { Text("ADMIN CONTROLS", letterSpacing = 1.sp) },
+                    selected = false,
+                    onClick = { /* TODO */ },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        unselectedContainerColor = Color.Transparent,
+                        unselectedIconColor = NeonCyan,
+                        unselectedTextColor = Color.White
+                    ),
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                HorizontalDivider(color = Color.DarkGray, modifier = Modifier.padding(horizontal = 16.dp))
+                
+                Text(
+                    "VERSION 1.0.0",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    letterSpacing = 2.sp
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = NeonCyan)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
                     )
                 )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "NEURAL VIBE ANALYZER",
-                color = NeonCyan,
-                fontSize = 12.sp,
-                letterSpacing = 2.sp,
-                modifier = Modifier.alpha(0.7f)
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            OutlinedTextField(
-                value = "",
-                onValueChange = {},
-                label = { Text("ENTER SUBJECT NAME", color = Color.Gray) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = NeonCyan,
-                    unfocusedBorderColor = Color.DarkGray,
-                    focusedTextColor = Color.White
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Button(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
-                shape = RoundedCornerShape(8.dp)
+            },
+            containerColor = DarkCharcoal
+        ) { padding ->
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(animationSpec = tween(1000)) + 
+                        slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
             ) {
-                Text(
-                    "INITIALIZE SCAN",
-                    color = DarkCharcoal,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "NEURAL VIBE ANALYZER",
+                        color = NeonCyan,
+                        fontSize = 12.sp,
+                        letterSpacing = 2.sp,
+                        modifier = Modifier.alpha(0.7f)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    OutlinedTextField(
+                        value = "",
+                        onValueChange = {},
+                        label = { Text("ENTER SUBJECT NAME", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NeonCyan,
+                            unfocusedBorderColor = Color.DarkGray,
+                            focusedTextColor = Color.White
+                        )
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Button(
+                        onClick = { },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            "INITIALIZE SCAN",
+                            color = DarkCharcoal,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
             }
         }
     }
