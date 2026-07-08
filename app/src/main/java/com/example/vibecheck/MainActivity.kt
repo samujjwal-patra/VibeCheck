@@ -98,7 +98,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         initialValue = 1f,
         targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(1500, easing = EaseInOutSine),
             repeatMode = RepeatMode.Reverse
         ),
         label = "scale"
@@ -107,7 +107,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         initialValue = 0.3f,
         targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(1500, easing = EaseInOutSine),
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
@@ -158,19 +158,19 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         phase = 2 // INITIALIZING
         
         repeat(5) {
-            delay((100..300).random().toLong())
-            glitchOffset = ((-5)..5).random().dp
-            glitchAlpha = 0.5f
-            delay(50)
+            delay((50..150).random().toLong())
+            glitchOffset = ((-8)..8).random().dp
+            glitchAlpha = 0.6f
+            delay(40)
             glitchOffset = 0.dp
             glitchAlpha = 0f
         }
         
         delay(1000)
         phase = 3 // READY
-        delay(1000)
+        delay(1200)
         phase = 4 // TRANSITION
-        delay(600)
+        delay(800)
         onAnimationFinished()
     }
 
@@ -570,8 +570,8 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
                 val dashboardTransition = rememberInfiniteTransition(label = "dashboard_bg")
                 val bgPulseAlpha by dashboardTransition.animateFloat(
                     initialValue = 0.02f,
-                    targetValue = 0.1f,
-                    animationSpec = infiniteRepeatable(tween(2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                    targetValue = 0.12f,
+                    animationSpec = infiniteRepeatable(tween(2500, easing = EaseInOutQuad), RepeatMode.Reverse),
                     label = "bg_pulse"
                 )
                 
@@ -608,7 +608,14 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
 
                 AnimatedVisibility(
                     visible = visible && !isScanning && !showResult && !showAdminScreen && !showAdminWelcome,
-                    enter = fadeIn(animationSpec = tween(1000)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+                    enter = fadeIn(animationSpec = tween(1200, easing = LinearOutSlowInEasing)) + 
+                            slideInVertically(
+                                initialOffsetY = { it / 3 }, 
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy, 
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 32.dp),
@@ -831,12 +838,12 @@ fun AdminWelcomeScreen(onFinished: () -> Unit) {
     
     LaunchedEffect(Unit) {
         visible = true
-        delay(500)
+        delay(600)
         fullName.forEachIndexed { index, _ ->
             typedName = fullName.substring(0, index + 1)
-            delay(100)
+            delay((80..150).random().toLong())
         }
-        delay(1500)
+        delay(1200)
         onFinished()
     }
 
@@ -927,7 +934,7 @@ fun AdminWelcomeScreen(onFinished: () -> Unit) {
             ) {
                 val progress by animateFloatAsState(
                     targetValue = if (typedName.length == fullName.length) 1f else 0f,
-                    animationSpec = tween(1500),
+                    animationSpec = tween(1200, easing = LinearOutSlowInEasing),
                     label = "progress"
                 )
                 Box(
@@ -1421,21 +1428,39 @@ fun ScanningScreen(name: String, onScanComplete: () -> Unit) {
     var currentInstruction by remember { mutableStateOf("CENTER FACE IN FRAME") }
     val infiniteTransition = rememberInfiniteTransition(label = "scanning")
     val primaryColor = MaterialTheme.colorScheme.primary
-    val animatedProgress by animateFloatAsState(targetValue = scanProgress, animationSpec = tween(600, easing = LinearOutSlowInEasing), label = "progress")
-    val scanLineY by infiniteTransition.animateFloat(0f, 1f, infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse), label = "scanLine")
+    val animatedProgress by animateFloatAsState(
+        targetValue = scanProgress, 
+        animationSpec = tween(1000, easing = LinearOutSlowInEasing), 
+        label = "progress"
+    )
+    val scanLineY by infiniteTransition.animateFloat(
+        initialValue = 0f, 
+        targetValue = 1f, 
+        animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing), RepeatMode.Reverse), 
+        label = "scanLine"
+    )
     val frameAlpha by infiniteTransition.animateFloat(0.4f, 1f, infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "frameAlpha")
 
     LaunchedEffect(Unit) {
         val instructions = listOf("CENTER FACE IN FRAME", "MOVE SLIGHTLY TO THE LEFT", "TILT HEAD UPWARD", "BLINK TWICE", "HOLD STILL...", "SMILE FOR CALIBRATION", "LOOK DIRECTLY AT THE SENSORS")
-        launch { while (scanProgress < 1f) { delay(2000); currentInstruction = instructions.random() } }
-        val steps = listOf(0.1f, 0.25f, 0.4f, 0.55f, 0.7f, 0.85f, 1.0f)
+        launch { 
+            while (scanProgress < 1f) { 
+                delay((1500..3000).random().toLong())
+                currentInstruction = instructions.random() 
+            } 
+        }
+        val steps = listOf(0.15f, 0.32f, 0.48f, 0.65f, 0.78f, 0.92f, 1.0f)
         for (target in steps) {
             val start = scanProgress
             val distance = target - start
-            repeat(10) { delay((40..80).random().toLong()); scanProgress += distance / 10 }
-            if (target < 1f) delay((200..400).random().toLong())
+            val iterations = (8..15).random()
+            repeat(iterations) { 
+                delay((30..60).random().toLong())
+                scanProgress += distance / iterations 
+            }
+            if (target < 1f) delay((150..400).random().toLong())
         }
-        delay(800)
+        delay(1000)
         onScanComplete()
     }
 
@@ -1537,7 +1562,14 @@ fun ResultScreen(name: String, onScanAgain: () -> Unit) {
 
         AnimatedVisibility(
             visible = showContent,
-            enter = fadeIn(tween(1000)) + slideInVertically(initialOffsetY = { 50 }, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+            enter = fadeIn(tween(1200, easing = EaseInOutQuart)) + 
+                    slideInVertically(
+                        initialOffsetY = { 80 }, 
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
         ) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(24.dp),
