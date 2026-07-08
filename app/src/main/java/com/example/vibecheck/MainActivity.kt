@@ -466,15 +466,32 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
         gesturesEnabled = !isScanning && !showResult,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = DarkCharcoal.copy(alpha = 0.7f),
+                drawerContainerColor = Color.White.copy(alpha = 0.05f),
                 drawerContentColor = Color.White,
                 modifier = Modifier
                     .width(300.dp)
                     .fillMaxHeight()
-                    .graphicsLayer { clip = true; shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp) }
+                    .graphicsLayer { 
+                        clip = true
+                        shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp) 
+                    }
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.1f),
+                                Color.Transparent
+                            )
+                        )
+                    )
                     .border(
                         width = 1.dp,
-                        brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.2f), MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), Color.White.copy(alpha = 0.05f))),
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.3f), 
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), 
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
                         shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
                     )
             ) {
@@ -513,7 +530,14 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
             }
         }
     ) {
+        val drawerBlur by animateDpAsState(
+            targetValue = if (drawerState.isOpen) 12.dp else 0.dp,
+            animationSpec = tween(500),
+            label = "drawer_blur"
+        )
+        
         Scaffold(
+            modifier = Modifier.blur(drawerBlur),
             topBar = {
                 if (!isScanning && !showResult && !showAdminScreen && !showAdminWelcome) {
                     CenterAlignedTopAppBar(
