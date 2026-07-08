@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,14 +23,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.camera.core.CameraSelector
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.example.vibecheck.ui.theme.DarkCharcoal
 import com.example.vibecheck.ui.theme.NeonCyan
 import com.example.vibecheck.ui.theme.VibeCheckTheme
@@ -161,10 +173,10 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         Canvas(modifier = Modifier.fillMaxSize().alpha(0.1f * particleAlpha)) {
             val step = 40.dp.toPx()
             for (i in 0..size.width.toInt() step step.toInt()) {
-                drawLine(NeonCyan, androidx.compose.ui.geometry.Offset(i.toFloat(), 0f), androidx.compose.ui.geometry.Offset(i.toFloat(), size.height), strokeWidth = 1f)
+                drawLine(NeonCyan, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height), strokeWidth = 1f)
             }
             for (i in 0..size.height.toInt() step step.toInt()) {
-                drawLine(NeonCyan, androidx.compose.ui.geometry.Offset(0f, i.toFloat()), androidx.compose.ui.geometry.Offset(size.width, i.toFloat()), strokeWidth = 1f)
+                drawLine(NeonCyan, Offset(0f, i.toFloat()), Offset(size.width, i.toFloat()), strokeWidth = 1f)
             }
         }
 
@@ -190,7 +202,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
                         drawCircle(
                             color = NeonCyan,
                             radius = size.minDimension / 2,
-                            style = Stroke(width = 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
+                            style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
                         )
                         
                         // Scanning Sweep
@@ -304,7 +316,20 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showThemeDialog by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var isScanning by remember { mutableStateOf(false) }
+    var isGenderExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            isScanning = true
+        }
+    }
+
     LaunchedEffect(Unit) {
         visible = true
     }
@@ -357,9 +382,27 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = DarkCharcoal,
+                drawerContainerColor = DarkCharcoal.copy(alpha = 0.7f),
                 drawerContentColor = Color.White,
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier
+                    .width(300.dp)
+                    .fillMaxHeight()
+                    .graphicsLayer {
+                        clip = true
+                        shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+                    }
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.2f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
+                    )
+                    .blur(if (drawerState.isOpen) 0.dp else 0.dp) // Placeholder for future blur logic
             ) {
                 Box(
                     modifier = Modifier
@@ -460,66 +503,374 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
             },
             containerColor = DarkCharcoal
         ) { padding ->
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(animationSpec = tween(1000)) + 
-                        slideInVertically(
-                            initialOffsetY = { it / 2 },
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedVisibility(
+                    visible = visible && !isScanning,
+                    enter = fadeIn(animationSpec = tween(1000)) + 
+                            slideInVertically(
+                                initialOffsetY = { it / 2 },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
                             )
-                        )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(32.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "NEURAL VIBE ANALYZER",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 12.sp,
-                        letterSpacing = 2.sp,
-                        modifier = Modifier.alpha(0.7f)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("ENTER SUBJECT NAME", color = Color.Gray) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.DarkGray,
-                            focusedTextColor = Color.White
-                        )
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Button(
-                        onClick = { },
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        shape = RoundedCornerShape(8.dp)
+                            .fillMaxSize()
+                            .padding(padding)
+                            .padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "INITIALIZE SCAN",
-                            color = DarkCharcoal,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            text = "NEURAL VIBE ANALYZER",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp,
+                            letterSpacing = 2.sp,
+                            modifier = Modifier.alpha(0.7f)
                         )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("ENTER SUBJECT NAME", color = Color.Gray) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = Color.DarkGray,
+                                focusedTextColor = Color.White
+                            )
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        ExposedDropdownMenuBox(
+                            expanded = isGenderExpanded,
+                            onExpandedChange = { isGenderExpanded = !isGenderExpanded },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = gender.uppercase(),
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("SELECT SUBJECT GENDER", color = Color.Gray) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isGenderExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = Color.DarkGray,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = isGenderExpanded,
+                                onDismissRequest = { isGenderExpanded = false },
+                                modifier = Modifier.background(DarkCharcoal).border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                            ) {
+                                listOf("Male", "Female", "Custom").forEach { selection ->
+                                    DropdownMenuItem(
+                                        text = { Text(selection.uppercase(), color = Color.White, letterSpacing = 1.sp) },
+                                        onClick = {
+                                            gender = selection
+                                            isGenderExpanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        Button(
+                            onClick = { 
+                                if (name.isNotBlank() && gender.isNotBlank()) {
+                                    val permissionCheckResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                                        isScanning = true
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                "INITIALIZE SCAN",
+                                color = DarkCharcoal,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
+
+                if (isScanning) {
+                    ScanningScreen(name = name, onScanComplete = { isScanning = false })
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun CameraPreview(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val executor = ContextCompat.getMainExecutor(ctx)
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+                val preview = androidx.camera.core.Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                val cameraSelector = CameraSelector.Builder()
+                    .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                    .build()
+
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        cameraSelector,
+                        preview
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, executor)
+            previewView
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ScanningScreen(name: String, onScanComplete: () -> Unit) {
+    var scanProgress by remember { mutableFloatStateOf(0f) }
+    var currentInstruction by remember { mutableStateOf("CENTER FACE IN FRAME") }
+    val infiniteTransition = rememberInfiniteTransition(label = "scanning")
+    val primaryColor = MaterialTheme.colorScheme.primary
+    
+    val animatedProgress by animateFloatAsState(
+        targetValue = scanProgress,
+        animationSpec = tween(durationMillis = 600, easing = LinearOutSlowInEasing),
+        label = "progress"
+    )
+
+    val scanLineY by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scanLine"
+    )
+
+    val frameAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "frameAlpha"
+    )
+
+    LaunchedEffect(Unit) {
+        val instructions = listOf(
+            "CENTER FACE IN FRAME",
+            "MOVE SLIGHTLY TO THE LEFT",
+            "TILT HEAD UPWARD",
+            "BLINK TWICE",
+            "HOLD STILL...",
+            "SMILE FOR CALIBRATION",
+            "LOOK DIRECTLY AT THE SENSORS"
+        )
+        
+        launch {
+            while (scanProgress < 1f) {
+                delay(2000)
+                currentInstruction = instructions.random()
+            }
+        }
+
+        // Simulate complex neural analysis steps - Faster (Total ~8 sec)
+        val steps = listOf(0.1f, 0.25f, 0.4f, 0.55f, 0.7f, 0.85f, 1.0f)
+        for (target in steps) {
+            val start = scanProgress
+            val distance = target - start
+            val substeps = 10
+            repeat(substeps) {
+                delay((40..80).random().toLong())
+                scanProgress += distance / substeps
+            }
+            // Artificial "processing" pause at certain milestones
+            if (target < 1f) {
+                delay((200..400).random().toLong())
+            }
+        }
+        delay(800)
+        onScanComplete()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkCharcoal.copy(alpha = 0.95f))
+            .clickable(enabled = false) {}, // Intercept clicks
+        contentAlignment = Alignment.Center
+    ) {
+        // Background Grid
+        Canvas(modifier = Modifier.fillMaxSize().alpha(0.05f)) {
+            val step = 30.dp.toPx()
+            for (i in 0..size.width.toInt() step step.toInt()) {
+                drawLine(Color.White, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height), strokeWidth = 1f)
+            }
+            for (i in 0..size.height.toInt() step step.toInt()) {
+                drawLine(Color.White, Offset(0f, i.toFloat()), Offset(size.width, i.toFloat()), strokeWidth = 1f)
+            }
+        }
+
+        // Futuristic Scanning Frame
+        Box(
+            modifier = Modifier
+                .size(320.dp)
+                .graphicsLayer {
+                    alpha = frameAlpha
+                }
+        ) {
+            // Corner Accents
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cornerSize = 40.dp.toPx()
+                val stroke = 4.dp.toPx()
+                
+                // Top-Left
+                drawLine(primaryColor, Offset(0f, 0f), Offset(cornerSize, 0f), strokeWidth = stroke)
+                drawLine(primaryColor, Offset(0f, 0f), Offset(0f, cornerSize), strokeWidth = stroke)
+                // Top-Right
+                drawLine(primaryColor, Offset(size.width, 0f), Offset(size.width - cornerSize, 0f), strokeWidth = stroke)
+                drawLine(primaryColor, Offset(size.width, 0f), Offset(size.width, cornerSize), strokeWidth = stroke)
+                // Bottom-Left
+                drawLine(primaryColor, Offset(0f, size.height), Offset(cornerSize, size.height), strokeWidth = stroke)
+                drawLine(primaryColor, Offset(0f, size.height), Offset(0f, size.height - cornerSize), strokeWidth = stroke)
+                // Bottom-Right
+                drawLine(primaryColor, Offset(size.width, size.height), Offset(size.width - cornerSize, size.height), strokeWidth = stroke)
+                drawLine(primaryColor, Offset(size.width, size.height), Offset(size.width, size.height - cornerSize), strokeWidth = stroke)
+            }
+
+            // Scanning Area
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(primaryColor.copy(alpha = 0.05f))
+            ) {
+                CameraPreview(modifier = Modifier.fillMaxSize())
+
+                // Scanning Laser Line
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val y = size.height * scanLineY
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            listOf(Color.Transparent, primaryColor, Color.Transparent)
+                        ),
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 6.dp.toPx()
+                    )
+                    // Glow for the line
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(Color.Transparent, primaryColor.copy(alpha = 0.2f), Color.Transparent),
+                            startY = y - 20.dp.toPx(),
+                            endY = y + 20.dp.toPx()
+                        ),
+                        topLeft = Offset(0f, y - 20.dp.toPx()),
+                        size = androidx.compose.ui.geometry.Size(size.width, 40.dp.toPx())
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 60.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "NEURAL UPLINK ACTIVE",
+                color = primaryColor,
+                fontSize = 12.sp,
+                letterSpacing = 4.sp,
+                fontWeight = FontWeight.Light
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "ANALYZING: ${name.uppercase()}",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Box(contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier.size(80.dp),
+                    color = primaryColor,
+                    strokeWidth = 4.dp,
+                    trackColor = primaryColor.copy(alpha = 0.1f)
+                )
+                Text(
+                    text = "${(animatedProgress * 100).toInt()}%",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "[ $currentInstruction ]",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(bottom = 12.dp).alpha(0.8f)
+            )
+
+            val statusText = when {
+                animatedProgress < 0.3f -> "CALIBRATING AURA SENSORS..."
+                animatedProgress < 0.6f -> "MAPPING BIOMETRIC VIBES..."
+                animatedProgress < 0.9f -> "DECODING NEURAL SIGNATURES..."
+                else -> "FINALIZING VIBE REPORT..."
+            }
+            
+            Text(
+                text = statusText,
+                color = primaryColor.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                letterSpacing = 1.sp
+            )
         }
     }
 }
