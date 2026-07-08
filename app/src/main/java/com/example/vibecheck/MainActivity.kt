@@ -312,6 +312,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
     val scope = rememberCoroutineScope()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAdminPasswordDialog by remember { mutableStateOf(false) }
+    var showAdminWelcome by remember { mutableStateOf(false) }
     var showAdminScreen by remember { mutableStateOf(false) }
     var adminPassword by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -383,6 +384,8 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
         AdminScreen(onDismiss = { showAdminScreen = false })
     }
 
+
+
     if (showAdminPasswordDialog) {
         AlertDialog(
             onDismissRequest = { showAdminPasswordDialog = false; adminPassword = "" },
@@ -409,7 +412,7 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
                 TextButton(onClick = { 
                     if (adminPassword == "VibeSetUp") {
                         showAdminPasswordDialog = false
-                        showAdminScreen = true
+                        showAdminWelcome = true
                         adminPassword = ""
                     }
                 }) {
@@ -782,6 +785,145 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
                 }
                 if (showResult) ResultScreen(name = name, onScanAgain = { showResult = false; name = ""; gender = "" })
             }
+        }
+    }
+
+    if (showAdminWelcome) {
+        AdminWelcomeScreen(onFinished = {
+            showAdminWelcome = false
+            showAdminScreen = true
+        })
+    }
+}
+
+@Composable
+fun AdminWelcomeScreen(onFinished: () -> Unit) {
+    var visible by remember { mutableStateOf(false) }
+    var typedName by remember { mutableStateOf("") }
+    val fullName = "SAMUJJWAL"
+    val primaryColor = MaterialTheme.colorScheme.primary
+    
+    LaunchedEffect(Unit) {
+        visible = true
+        delay(500)
+        fullName.forEachIndexed { index, _ ->
+            typedName = fullName.substring(0, index + 1)
+            delay(100)
+        }
+        delay(1500)
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkCharcoal)
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        // Technical grid background
+        Canvas(modifier = Modifier.fillMaxSize().alpha(0.15f)) {
+            val step = 30.dp.toPx()
+            for (i in 0..size.width.toInt() step step.toInt()) drawLine(primaryColor, Offset(i.toFloat(), 0f), Offset(i.toFloat(), size.height), strokeWidth = 0.5f)
+            for (i in 0..size.height.toInt() step step.toInt()) drawLine(primaryColor, Offset(0f, i.toFloat()), Offset(size.width, i.toFloat()), strokeWidth = 0.5f)
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "welcome_glow")
+            val iconAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(1000), RepeatMode.Reverse),
+                label = "icon_alpha"
+            )
+
+            Icon(
+                Icons.Default.VerifiedUser,
+                contentDescription = null,
+                modifier = Modifier.size(100.dp).alpha(iconAlpha),
+                tint = primaryColor
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Text(
+                "IDENTITY CONFIRMED",
+                color = primaryColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp,
+                modifier = Modifier.alpha(0.7f)
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "HELLO, ",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = 2.sp
+                )
+                Text(
+                    typedName,
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 4.sp
+                )
+                // Blinking cursor
+                val cursorAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+                    label = "cursor"
+                )
+                Box(
+                    modifier = Modifier
+                        .size(width = 12.dp, height = 32.dp)
+                        .background(primaryColor.copy(alpha = cursorAlpha))
+                        .offset(x = 4.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            // Loading bar
+            Box(
+                modifier = Modifier
+                    .width(240.dp)
+                    .height(4.dp)
+                    .background(Color.White.copy(alpha = 0.05f))
+            ) {
+                val progress by animateFloatAsState(
+                    targetValue = if (typedName.length == fullName.length) 1f else 0f,
+                    animationSpec = tween(1500),
+                    label = "progress"
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                listOf(primaryColor.copy(alpha = 0.2f), primaryColor)
+                            )
+                        )
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                "BYPASSING SECURITY PROTOCOLS...",
+                color = primaryColor.copy(alpha = 0.5f),
+                fontSize = 9.sp,
+                letterSpacing = 2.sp
+            )
         }
     }
 }
