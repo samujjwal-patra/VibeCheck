@@ -168,9 +168,9 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         
         delay(1000)
         phase = 3 // READY
-        delay(1200)
-        phase = 4 // TRANSITION
         delay(800)
+        phase = 4 // TRANSITION
+        delay(300)
         onAnimationFinished()
     }
 
@@ -608,12 +608,12 @@ fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
 
                 AnimatedVisibility(
                     visible = visible && !isScanning && !showResult && !showAdminScreen && !showAdminWelcome,
-                    enter = fadeIn(animationSpec = tween(1200, easing = LinearOutSlowInEasing)) + 
+                    enter = fadeIn(animationSpec = tween(800, easing = LinearOutSlowInEasing)) + 
                             slideInVertically(
-                                initialOffsetY = { it / 3 }, 
+                                initialOffsetY = { it / 4 }, 
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy, 
-                                    stiffness = Spring.StiffnessLow
+                                    stiffness = Spring.StiffnessMediumLow
                                 )
                             )
                 ) {
