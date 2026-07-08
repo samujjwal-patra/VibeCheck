@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,15 +41,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            VibeCheckTheme {
-                MainContent()
+            var currentTheme by remember { mutableStateOf("Cyan") }
+            VibeCheckTheme(themeMode = currentTheme) {
+                MainContent(onThemeChange = { currentTheme = it }, currentTheme = currentTheme)
             }
         }
     }
 }
 
 @Composable
-fun MainContent() {
+fun MainContent(onThemeChange: (String) -> Unit, currentTheme: String) {
     var showSplash by remember { mutableStateOf(true) }
 
     Surface(
@@ -58,7 +60,7 @@ fun MainContent() {
         if (showSplash) {
             SplashScreen(onAnimationFinished = { showSplash = false })
         } else {
-            DashboardScreen()
+            DashboardScreen(onThemeChange = onThemeChange, currentTheme = currentTheme)
         }
     }
 }
@@ -143,7 +145,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             glitchAlpha = 0f
         }
         
-        delay(1500)
+        delay(1000)
         phase = 3 // READY
         delay(1000)
         phase = 4 // TRANSITION
@@ -297,13 +299,58 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(onThemeChange: (String) -> Unit, currentTheme: String) {
     var visible by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var showThemeDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         visible = true
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            containerColor = DarkCharcoal,
+            title = { Text("SELECT SYSTEM AURA", color = Color.White) },
+            text = {
+                Column {
+                    listOf("Cyan", "Crimson", "Golden").forEach { theme ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    onThemeChange(theme)
+                                    showThemeDialog = false
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(
+                                        when(theme) {
+                                            "Crimson" -> com.example.vibecheck.ui.theme.CrimsonRed
+                                            "Golden" -> com.example.vibecheck.ui.theme.GoldenYellow
+                                            else -> com.example.vibecheck.ui.theme.NeonCyan
+                                        },
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(theme.uppercase(), color = Color.White, letterSpacing = 2.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemeDialog = false }) {
+                    Text("CLOSE", color = NeonCyan)
+                }
+            }
+        )
     }
 
     ModalNavigationDrawer(
@@ -314,34 +361,67 @@ fun DashboardScreen() {
                 drawerContentColor = Color.White,
                 modifier = Modifier.width(300.dp)
             ) {
-                Spacer(modifier = Modifier.height(48.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(DarkCharcoal, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                            )
+                        )
+                        .padding(vertical = 48.dp, horizontal = 24.dp)
+                ) {
+                    Column {
+                        Text(
+                            "VIBECHECK",
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            letterSpacing = 4.sp
+                        )
+                        Text(
+                            "NEURAL INTERFACE",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 2.sp
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = Color.DarkGray)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Text(
                     "SYSTEM SETTINGS",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.titleSmall,
-                    color = NeonCyan,
+                    color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 2.sp
                 )
                 NavigationDrawerItem(
-                    label = { Text("THEME SELECTION", letterSpacing = 1.sp) },
+                    label = { Text("Theme Selection", letterSpacing = 1.sp) },
                     selected = false,
-                    onClick = { /* TODO */ },
+                    onClick = { 
+                        showThemeDialog = true
+                        scope.launch { drawerState.close() }
+                    },
                     icon = { Icon(Icons.Default.Palette, contentDescription = null) },
                     colors = NavigationDrawerItemDefaults.colors(
                         unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = NeonCyan,
+                        unselectedIconColor = MaterialTheme.colorScheme.primary,
                         unselectedTextColor = Color.White
                     ),
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
                 NavigationDrawerItem(
-                    label = { Text("ADMIN CONTROLS", letterSpacing = 1.sp) },
+                    label = { Text("ADMIN Controls", letterSpacing = 1.sp) },
                     selected = false,
                     onClick = { /* TODO */ },
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     colors = NavigationDrawerItemDefaults.colors(
                         unselectedContainerColor = Color.Transparent,
-                        unselectedIconColor = NeonCyan,
+                        unselectedIconColor = MaterialTheme.colorScheme.primary,
                         unselectedTextColor = Color.White
                     ),
                     modifier = Modifier.padding(horizontal = 12.dp)
@@ -370,7 +450,7 @@ fun DashboardScreen() {
                     title = { },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = NeonCyan)
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -401,7 +481,7 @@ fun DashboardScreen() {
                 ) {
                     Text(
                         text = "NEURAL VIBE ANALYZER",
-                        color = NeonCyan,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 12.sp,
                         letterSpacing = 2.sp,
                         modifier = Modifier.alpha(0.7f)
@@ -415,7 +495,7 @@ fun DashboardScreen() {
                         label = { Text("ENTER SUBJECT NAME", color = Color.Gray) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NeonCyan,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color.DarkGray,
                             focusedTextColor = Color.White
                         )
@@ -428,7 +508,7 @@ fun DashboardScreen() {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
@@ -448,6 +528,6 @@ fun DashboardScreen() {
 @Composable
 fun GreetingPreview() {
     VibeCheckTheme {
-        MainContent()
+        MainContent(onThemeChange = {}, currentTheme = "Cyan")
     }
 }
