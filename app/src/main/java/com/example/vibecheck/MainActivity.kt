@@ -111,22 +111,22 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
 
     // Scanning Beam
     val beamPosition by animateFloatAsState(
-        targetValue = if (phase >= 2) 1.2f else -0.2f,
-        animationSpec = tween(2000, easing = LinearOutSlowInEasing),
+        targetValue = if (phase >= 2) 1.5f else -0.5f,
+        animationSpec = tween(3000, easing = LinearOutSlowInEasing),
         label = "beamPosition"
     )
 
     // Background Particle States (Simulated)
     val particleAlpha by animateFloatAsState(
-        targetValue = if (phase < 3) 0.4f else 0f,
+        targetValue = if (phase < 4) 0.4f else 0f,
         animationSpec = tween(1000),
         label = "particleAlpha"
     )
 
     LaunchedEffect(Unit) {
-        // Phase 1: Ambient
+        // Phase 1: Ambient (SCAN)
         delay(1200)
-        phase = 2
+        phase = 2 // INITIALIZING
         
         // Random Glitch Effects during reveal
         repeat(5) {
@@ -138,8 +138,10 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             glitchAlpha = 0f
         }
         
-        delay(800)
-        phase = 3
+        delay(1500)
+        phase = 3 // READY
+        delay(1000)
+        phase = 4 // TRANSITION
         delay(600)
         onAnimationFinished()
     }
@@ -161,7 +163,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.scale(if(phase >= 3) 0.9f else 1f).alpha(if(phase >= 3) 0f else 1f)
+            modifier = Modifier.scale(if(phase >= 4) 0.9f else 1f).alpha(if(phase >= 4) 0f else 1f)
         ) {
             // THE CORE: Multi-layered Radar
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(200.dp)) {
@@ -201,18 +203,23 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
                 // Inner Core
                 Surface(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(66.dp)
                         .scale(pulseScale),
-                    shape = RoundedCornerShape(30.dp),
+                    shape = RoundedCornerShape(33.dp),
                     color = NeonCyan.copy(alpha = 0.1f),
                     border = androidx.compose.foundation.BorderStroke(2.dp, NeonCyan)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = if(phase == 1) "SCAN" else "READY",
+                            text = when(phase) {
+                                1 -> "SCAN"
+                                2 -> "INITIALIZING"
+                                else -> "READY"
+                            },
                             color = NeonCyan,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+                            fontSize = if(phase == 2) 7.sp else 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
